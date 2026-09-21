@@ -151,16 +151,3 @@ Use these demo accounts to log in at **[http://localhost:3000/login](http://loca
 
 ---
 
-## 📁 Project Structure
-
-```
-├── backend/            # Flask REST API (app factory, blueprints per role)
-│   ├── app/models/     # 13 SQLAlchemy models (Donation, Request, Assignment, Delivery, ...)
-│   ├── app/routes/     # auth, admin, donor, ngo, volunteer, notification, location
-│   ├── app/services/   # notification + mock SMS (optional Twilio hook)
-│   ├── app/utils/      # CAPTCHA, RBAC decorators, haversine geo helper, validators
-│   ├── seed.py         # Demo data: 4 roles + expiry-state + proximity demo records
-│   └── run.py          # Dev server entrypoint
-├── frontend/           # React 18 + Vite + Tailwind SPA (role-based portals)
-└── database/           # SQLite DB file + schema.sql / seed_data.sql reference
-```
