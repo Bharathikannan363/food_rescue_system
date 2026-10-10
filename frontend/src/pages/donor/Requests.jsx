@@ -70,7 +70,7 @@ const DonorRequests = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">NGO Food Requests</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Grant permission to verified NGOs requesting your surplus food</p>
+      
       </div>
 
       <DataTable columns={columns} data={requests} emptyText="No NGO requests received yet." />

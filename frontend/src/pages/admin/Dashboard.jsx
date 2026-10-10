@@ -58,7 +58,6 @@ const AdminDashboard = () => {
       {/* Redistribution Analytics Chart */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <h3 className="font-bold text-slate-800 text-lg mb-1">Monthly Food Rescue & Redistribution Trends</h3>
-        <p className="text-xs text-slate-500 mb-4">Total monthly donations vs completed NGO deliveries</p>
         
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">

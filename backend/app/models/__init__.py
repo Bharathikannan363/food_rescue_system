@@ -9,11 +9,10 @@ from app.models.delivery import Delivery
 from app.models.location import VolunteerLocation
 from app.models.notification import Notification
 from app.models.report import Report
-from app.models.payment import Payment
 from app.models.log import Log
 
 __all__ = [
     'User', 'Donor', 'NGO', 'Volunteer',
     'Donation', 'Request', 'Assignment', 'Delivery',
-    'VolunteerLocation', 'Notification', 'Report', 'Payment', 'Log'
+    'VolunteerLocation', 'Notification', 'Report', 'Log'
 ]

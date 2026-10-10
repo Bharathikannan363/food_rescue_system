@@ -29,7 +29,7 @@ const DonorHistory = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">Donation History</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Completed and past food rescue contributions</p>
+       
       </div>
 
       <DataTable columns={columns} data={history} emptyText="No historical completed donations." />

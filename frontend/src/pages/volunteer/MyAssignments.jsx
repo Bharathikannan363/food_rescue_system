@@ -115,9 +115,6 @@ const VolunteerMyAssignments = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Volunteer Delivery Portal</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Claim open NGO-accepted deliveries or manage your active runs
-          </p>
         </div>
 
         {/* Tab Switcher */}
@@ -157,21 +154,12 @@ const VolunteerMyAssignments = () => {
       {/* TAB 1: OPEN BROADCAST TASKS */}
       {activeTab === 'open_tasks' && (
         <div className="space-y-4">
-          <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start gap-3 text-xs text-emerald-900">
-            <Radio className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-sm text-emerald-950">Broadcast Delivery Feed (All Volunteers)</p>
-              <p className="mt-0.5 text-emerald-800">
-                These donations have been verified & accepted by NGOs. Any volunteer can claim the delivery task on a first-come, first-served basis.
-              </p>
-            </div>
-          </div>
 
           {openTasks.length === 0 ? (
             <div className="p-12 text-center text-slate-400 bg-white border border-dashed border-slate-200 rounded-2xl space-y-2">
               <CheckCircle2 className="w-8 h-8 mx-auto text-slate-300" />
               <p className="font-semibold text-sm text-slate-600">No Open Delivery Tasks Right Now</p>
-              <p className="text-xs text-slate-400">When an NGO accepts surplus food, it will broadcast here for volunteers to claim.</p>
+             
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

@@ -46,19 +46,15 @@ const NGODashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">NGO Shelter Dashboard</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Browse available surplus food, submit requests, & confirm beneficiary deliveries</p>
         </div>
-        <Link to="/ngo/donations">
-          <Button icon={UtensilsCrossed}>Browse Available Food</Button>
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <DashboardCard title="Available Food" value={donations.length} icon={UtensilsCrossed} color="emerald" subtitle="Ready for request" />
-        <DashboardCard title="My Requests" value={requests.length} icon={FileText} color="blue" subtitle="Total requests" />
-        <DashboardCard title="Pending Donor" value={pendingReqs.length} icon={FileText} color="amber" subtitle="Awaiting donor response" />
-        <DashboardCard title="Accepted Requests" value={acceptedReqs.length} icon={CheckCircle2} color="purple" subtitle="Assigned to volunteer" />
-        <DashboardCard title="Completed Deliveries" value={completedReqs.length} icon={PackageCheck} color="emerald" subtitle="Food received & served" />
+        <DashboardCard title="Available Food" value={donations.length} icon={UtensilsCrossed} color="emerald" />
+        <DashboardCard title="My Requests" value={requests.length} icon={FileText} color="blue"  />
+        <DashboardCard title="Pending Donor" value={pendingReqs.length} icon={FileText} color="amber" />
+        <DashboardCard title="Accepted Requests" value={acceptedReqs.length} icon={CheckCircle2} color="purple"  />
+        <DashboardCard title="Completed Deliveries" value={completedReqs.length} icon={PackageCheck} color="emerald" />
       </div>
 
       {/* Available Food Section */}

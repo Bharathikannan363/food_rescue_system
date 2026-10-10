@@ -67,9 +67,6 @@ const NGOTracking = () => {
               <Radio className="w-3 h-3 animate-pulse text-amber-600" /> Live Stream
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Track real-time volunteer pickup and arrival locations for your requested food donations
-          </p>
         </div>
 
         <button
@@ -221,27 +218,6 @@ const NGOTracking = () => {
           Volunteers currently broadcasting live location and available for food rescue operations
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
-          {feedData.volunteers.map((v, idx) => (
-            <div
-              key={v.volunteer_id || idx}
-              onClick={() => v.latitude && v.longitude && setFocusCoords([v.latitude, v.longitude])}
-              className="p-3 bg-slate-50 hover:bg-blue-50/50 border border-slate-200 rounded-xl text-xs flex items-center justify-between cursor-pointer transition-all"
-            >
-              <div>
-                <p className="font-bold text-slate-800">{v.full_name}</p>
-                <p className="text-slate-500 text-[11px]">{v.vehicle_type || 'Bike'} &bull; {v.is_available ? 'Available' : 'Busy'}</p>
-              </div>
-              <div className="text-right">
-                {v.phone && (
-                  <span className="font-mono text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                    {v.phone}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

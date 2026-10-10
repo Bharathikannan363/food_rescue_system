@@ -59,7 +59,7 @@ const PostFood = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">Post Surplus Food</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Share excess food details for instant NGO request & volunteer pickup</p>
+       
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">

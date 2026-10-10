@@ -61,7 +61,6 @@ const AdminDonations = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">All Surplus Food Donations</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Review and verify food posts across the system</p>
       </div>
       <DataTable columns={columns} data={donations} emptyText="No donations recorded." />
     </div>

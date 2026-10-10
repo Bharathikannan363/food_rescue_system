@@ -40,7 +40,7 @@ const DonorDashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Donor Portal Dashboard</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Post surplus food and manage NGO distribution requests</p>
+         
         </div>
         <Link to="/donor/post-food">
           <Button icon={PlusCircle}>Post Surplus Food</Button>
@@ -48,10 +48,10 @@ const DonorDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <DashboardCard title="Total Donations" value={donations.length} icon={UtensilsCrossed} color="emerald" subtitle="All posted meals" />
-        <DashboardCard title="Active Surplus Posts" value={activeDonations.length} icon={Activity} color="amber" subtitle="Available for request" />
-        <DashboardCard title="Completed Deliveries" value={completedDonations.length} icon={PackageCheck} color="blue" subtitle="Distributed to NGOs" />
-        <DashboardCard title="Food Rescued" value={`${donations.length * 2.5} kg`} icon={HeartHandshake} color="purple" subtitle="Diverted from waste" />
+        <DashboardCard title="Total Donations" value={donations.length} icon={UtensilsCrossed} color="emerald"  />
+        <DashboardCard title="Active Surplus Posts" value={activeDonations.length} icon={Activity} color="amber" />
+        <DashboardCard title="Completed Deliveries" value={completedDonations.length} icon={PackageCheck} color="blue"  />
+        <DashboardCard title="Food Rescued" value={`${donations.length * 2.5} kg`} icon={HeartHandshake} color="purple" />
       </div>
 
       {/* Recent Surplus Posts Table */}
@@ -82,9 +82,7 @@ const DonorDashboard = () => {
                     <MapPin className="w-3 h-3 text-emerald-600" /> {d.pickup_address}
                   </p>
                 </div>
-                <Link to="/donor/requests">
-                  <Button size="sm" variant="outline">Check Requests</Button>
-                </Link>
+                
               </div>
             ))}
           </div>

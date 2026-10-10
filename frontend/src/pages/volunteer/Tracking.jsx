@@ -100,45 +100,11 @@ const VolunteerTracking = () => {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-slate-800">Volunteer GPS Tracker & Navigation</h2>
-            <span className="flex items-center gap-1 bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-xs font-semibold">
-              <Radio className="w-3 h-3 animate-pulse text-blue-600" /> Active GPS Stream
-            </span>
+            
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Streaming live device location to Flask API backend & displaying pickup routes
-          </p>
-        </div>
-
-        {/* GPS Badge & Actions */}
-        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-800">
-            <Navigation className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-            <span>
-              {userLat ? `${userLat.toFixed(4)}, ${userLng.toFixed(4)}` : (geoLoading ? 'Acquiring GPS...' : 'GPS Standby')}
-            </span>
-          </div>
-
-          <button
-            onClick={() => {
-              refreshLocation();
-              fetchTracking(true);
-            }}
-            disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 shadow-sm transition-all active:scale-95 disabled:opacity-50"
-            title="Force refresh coordinates from device GPS"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-600' : ''}`} />
-            <span>{refreshing ? 'Syncing...' : 'Sync GPS'}</span>
-          </button>
+          
         </div>
       </div>
-
-      {geoError && (
-        <div className="p-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
-          <span>Device GPS Note: {geoError}. Map will fall back to your registered profile position.</span>
-        </div>
-      )}
 
       {error && <ErrorMessage message={error} retry={() => fetchTracking(true)} />}
 
@@ -166,25 +132,6 @@ const VolunteerTracking = () => {
       {/* Active Mission Card */}
       {myActiveMission ? (
         <div className="bg-white p-5 rounded-2xl border-2 border-blue-500 shadow-md space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-100 px-2.5 py-0.5 rounded-full">
-                Current Assigned Mission: {myActiveMission.status?.replace('_', ' ')}
-              </span>
-              <h3 className="text-xl font-bold text-slate-800 mt-1">{myActiveMission.donation?.title}</h3>
-              <p className="text-xs text-slate-500">Package Quantity: {myActiveMission.donation?.quantity}</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => userLat && userLng && setFocusCoords([userLat, userLng])}
-                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-semibold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl transition-colors"
-              >
-                <Navigation className="w-3.5 h-3.5" /> Center on Me
-              </button>
-            </div>
-          </div>
-
           {/* Route details: Pickup -> Destination */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Pickup Stop */}
@@ -273,31 +220,12 @@ const VolunteerTracking = () => {
               </Link>
             )}
 
-            <Link
-              to="/volunteer/assignments"
-              className="text-xs text-slate-500 hover:text-slate-700 underline font-medium ml-auto"
-            >
-              View Full Assignment Details &rarr;
-            </Link>
+
           </div>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-bold text-slate-800 text-base">You Have No Active Deliveries Right Now</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Your live GPS coordinates are being streamed. Browse open food rescue requests below to claim an assignment!
-              </p>
-            </div>
-            <Link
-              to="/volunteer/assignments"
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all shrink-0 self-start sm:self-auto"
-            >
-              <span>View All Tasks</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          
 
           {/* Open tasks available for pickup */}
           {availableTasks.length > 0 && (

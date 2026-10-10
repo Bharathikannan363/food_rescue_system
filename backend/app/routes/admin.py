@@ -2,7 +2,7 @@ from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.extensions import db
-from app.models import User, Donor, NGO, Volunteer, Donation, Request as FoodRequest, Assignment, Delivery, VolunteerLocation, Report, Payment, Log
+from app.models import User, Donor, NGO, Volunteer, Donation, Request as FoodRequest, Assignment, Delivery, VolunteerLocation, Report, Log
 from app.utils.decorators import role_required
 from app.utils.geo import haversine_km
 from app.utils.logger import log_action

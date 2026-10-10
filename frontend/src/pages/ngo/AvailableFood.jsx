@@ -72,22 +72,15 @@ const NGOAvailableFood = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">Available Surplus Food Donations</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Perform FSSAI food quality verification check before requesting donation</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {donations.map((d) => (
           <div key={d.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3 flex flex-col justify-between">
             <div className="space-y-2">
-              <div className="flex items-start justify-between">
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">{d.food_type}</span>
-                <StatusBadge status={d.status} />
-              </div>
+             
               <div>
-                <ExpiryBadge state={d.expiry_state} />
-                {d.expiry_time && (
-                  <p className="text-[10px] text-slate-400 mt-1">Best before {new Date(`${d.expiry_time}Z`).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                )}
+                
               </div>
               <h3 className="font-bold text-slate-800 text-base">{d.title}</h3>
               <p className="text-xs text-slate-500 font-semibold">Donor: {d.donor_name}</p>
@@ -106,7 +99,7 @@ const NGOAvailableFood = () => {
               disabled={d.expiry_state === 'EXPIRED'}
               onClick={() => handleOpenQualityModal(d)}
             >
-              {d.expiry_state === 'EXPIRED' ? 'Expired - Cannot Accept' : 'Verify Quality & Accept Donation'}
+              {d.expiry_state === 'EXPIRED' ? 'Expired ' : 'Verify Quality & Accept Donation'}
             </Button>
           </div>
         ))}

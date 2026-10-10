@@ -5,11 +5,9 @@ from app.extensions import db
 from app.models import (
     User, Donor, NGO, Volunteer, Donation,
     Request as FoodRequest, Assignment, Delivery,
-    VolunteerLocation, Report, Payment, Log, Notification
+    VolunteerLocation, Report, Log, Notification
 )
-
 app = create_app()
-
 def seed_database():
     with app.app_context():
         print("Cleaning and seeding fresh database records...")
@@ -404,13 +402,7 @@ def seed_database():
             beneficiaries=530,
             food_saved='80.0 kg'
         )
-        pay = Payment(
-            transaction_id='TXN-INIT-1001',
-            user_id=vol_user.id,
-            amount=500.0,
-            purpose='Volunteer Logistics Support Grant',
-            status='SUCCESS'
-        )
+        
         log1 = Log(
             user_id=admin_user.id,
             action="SYSTEM_INIT",
@@ -418,7 +410,7 @@ def seed_database():
             entity_id=1,
             description="Initialized Food Rescue System with Broadcast Workflow: NGO 1/2/3 and Volunteer 1/2/3."
         )
-        db.session.add_all([rep, pay, log1])
+        db.session.add_all([rep, log1])
         db.session.commit()
 
         print("==================================================")

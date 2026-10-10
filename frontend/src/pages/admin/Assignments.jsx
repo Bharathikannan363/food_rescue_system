@@ -85,7 +85,6 @@ const AdminAssignments = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Volunteer Assignments & Broadcast Monitor</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Supervise automated volunteer broadcasts and manual proximity assignments</p>
         </div>
         <Button onClick={() => setModalOpen(true)}>
           Assign Volunteer Manually
@@ -93,43 +92,6 @@ const AdminAssignments = () => {
       </div>
 
       {/* Open Broadcasts Feed */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Radio className="w-4 h-4 text-emerald-600 animate-pulse" />
-            <h3 className="font-bold text-slate-800 text-sm">
-              Open Broadcast Deliveries Awaiting Volunteer Claim ({openBroadcasts.length})
-            </h3>
-          </div>
-          <span className="text-xs text-slate-400">Auto-broadcasted to all approved volunteers</span>
-        </div>
-
-        {openBroadcasts.length === 0 ? (
-          <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-xs text-slate-500">
-            No open broadcast tasks awaiting volunteer claim. All accepted requests have assigned volunteers!
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {openBroadcasts.map(b => (
-              <div key={b.id} className="p-3.5 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2 text-xs">
-                <div className="flex items-start justify-between">
-                  <span className="font-bold text-slate-800">{b.donation_title}</span>
-                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">BROADCASTING</span>
-                </div>
-                <p className="text-slate-600">🏢 Deliver to: <strong>{b.ngo_name}</strong></p>
-                <p className="text-slate-600">📍 Pickup: <strong>{b.donor_name}</strong></p>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedReqId(String(b.id)); setModalOpen(true); }}
-                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-900 hover:underline pt-1 block"
-                >
-                  ⚡ Admin Override: Assign Volunteer Directly &rarr;
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <h3 className="font-bold text-slate-800 text-sm">Claimed & Active Volunteer Deliveries</h3>

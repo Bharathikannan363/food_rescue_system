@@ -39,14 +39,12 @@ const AdminAnalytics = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">Advanced Analytics Dashboard</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Visual breakdown of food rescue operations & impact metrics</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bar Chart */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-800 text-base mb-1">Beneficiaries Served per Month</h3>
-          <p className="text-xs text-slate-400 mb-4">Total individuals provided meals via NGO distribution</p>
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.charts.monthly_stats}>
@@ -63,7 +61,7 @@ const AdminAnalytics = () => {
         {/* Pie Chart */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <h3 className="font-bold text-slate-800 text-base mb-1">Donation Fulfillment Status</h3>
-          <p className="text-xs text-slate-400 mb-4">Ratio of completed vs pending vs in-transit food items</p>
+        
           <div className="h-64 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>

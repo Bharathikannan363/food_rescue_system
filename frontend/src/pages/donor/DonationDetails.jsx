@@ -12,7 +12,7 @@ const DonorDonationDetails = () => {
 
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <h2 className="text-xl font-bold text-slate-800">Donation Details</h2>
-        <p className="text-xs text-slate-500 mt-1">Detailed view of your food donation and assigned logistics workflow.</p>
+      
       </div>
     </div>
   );

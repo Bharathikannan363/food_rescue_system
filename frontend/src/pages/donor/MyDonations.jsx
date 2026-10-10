@@ -43,8 +43,7 @@ const MyDonations = () => {
     }
   };
 
-  // Backend timestamps are naive UTC ISO strings; force UTC parsing so the
-  // 20-minute window and displayed times are correct in any local timezone.
+  
   const parseApiDate = (iso) => {
     if (!iso) return null;
     return new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`);
@@ -62,19 +61,7 @@ const MyDonations = () => {
     { header: 'Category', accessor: 'food_type', cell: (r) => <span className="text-xs bg-slate-100 px-2 py-1 rounded font-semibold">{r.food_type}</span> },
     { header: 'Quantity', accessor: 'quantity' },
     { header: 'Posted Time', accessor: 'created_at', cell: (r) => parseApiDate(r.created_at)?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || '-' },
-    {
-      header: 'Expiry Tracking',
-      cell: (r) => (
-        <div className="space-y-0.5">
-          <ExpiryBadge state={r.expiry_state} />
-          {r.expiry_time && (
-            <p className="text-[10px] text-slate-400">
-              Best before {parseApiDate(r.expiry_time)?.toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-            </p>
-          )}
-        </div>
-      )
-    },
+   
     {
       header: 'NGO & Volunteer',
       cell: (r) => (
@@ -121,28 +108,11 @@ const MyDonations = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-slate-800">My Surplus Food Donations</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Track your posted donations & manage 20-minute cancellation window</p>
+      
       </div>
 
       {/* Workflow Stepper Guide */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Redistribution Workflow</p>
-        <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-600">
-          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold">1. Available</span>
-          <span>➔</span>
-          <span className="px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg font-bold">2. NGO Accepted</span>
-          <span>➔</span>
-          <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-lg font-bold">3. Volunteer Assigned</span>
-          <span>➔</span>
-          <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-lg font-bold">4. Picked Up</span>
-          <span>➔</span>
-          <span className="px-2.5 py-1 bg-amber-100 text-amber-900 rounded-lg font-bold">5. Out for Delivery</span>
-          <span>➔</span>
-          <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold">6. Beneficiaries Fed</span>
-        </div>
-      </div>
-
-      <DataTable columns={columns} data={donations} emptyText="No food donations posted yet." />
+        <DataTable columns={columns} data={donations} emptyText="No food donations posted yet." />
     </div>
   );
 };
