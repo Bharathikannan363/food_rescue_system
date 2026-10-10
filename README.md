@@ -51,23 +51,6 @@ npm run dev           # Starts Vite Development Server on http://localhost:3000
 
 ---
 
-## 🔑 Pre-Configured Demo Credentials
-
-Use these demo accounts to log in at **[http://localhost:3000/login](http://localhost:3000/login)**:
-
-| Role | Username | Password | Organization / Name | Key Portal Features |
-| :--- | :--- | :--- | :--- | :--- |
-| **Admin** | `admin` | `Admin@123` | System Administrator | Monitor all activities, live volunteer GPS tracking map, donations & requests, analytics, audit logs |
-| **Donor** | `donor` | `Donor@123` | Grand Palace Hotel | Post surplus food, prep/expiry times, 20-min cancel window, track workflow progress |
-| **NGO 1** | `ngo` | `Ngo@123` | Hope & Care Shelter | Browse available food, FSSAI verification, **Accept food & broadcast to volunteers**, confirm delivery OK |
-| **NGO 2** | `ngo2` | `Ngo@123` | Annapoorna Food Relief | Second NGO to demonstrate multi-NGO view & race-guard (first NGO to accept locks the donation) |
-| **NGO 3** | `ngo3` | `Ngo@123` | Seva Community Kitchen | Third NGO shelter demonstrating community distribution and beneficiary confirmation |
-| **Volunteer 1** | `volunteer` | `Volunteer@123` | Alex Rivera (Van) | **Accept open broadcast deliveries**, enforced status workflow, HTML5 GPS broadcasting, proof upload |
-| **Volunteer 2** | `volunteer2` | `Volunteer@123` | Priya Sharma (Scooter) | Second volunteer demonstrating broadcast claiming competition and proximity ranking (~1.5 km) |
-| **Volunteer 3** | `volunteer3` | `Volunteer@123` | Ravi Kumar (Bike) | Third volunteer demonstrating open task view with dynamic location sharing |
-
----
-
 ## 🔄 End-to-End Broadcast Workflow
 
 ```
@@ -151,16 +134,3 @@ Use these demo accounts to log in at **[http://localhost:3000/login](http://loca
 
 ---
 
-## 📁 Project Structure
-
-```
-├── backend/            # Flask REST API (app factory, blueprints per role)
-│   ├── app/models/     # 13 SQLAlchemy models (Donation, Request, Assignment, Delivery, ...)
-│   ├── app/routes/     # auth, admin, donor, ngo, volunteer, notification, location
-│   ├── app/services/   # notification + mock SMS (optional Twilio hook)
-│   ├── app/utils/      # CAPTCHA, RBAC decorators, haversine geo helper, validators
-│   ├── seed.py         # Demo data: 4 roles + expiry-state + proximity demo records
-│   └── run.py          # Dev server entrypoint
-├── frontend/           # React 18 + Vite + Tailwind SPA (role-based portals)
-└── database/           # SQLite DB file + schema.sql / seed_data.sql reference
-```
