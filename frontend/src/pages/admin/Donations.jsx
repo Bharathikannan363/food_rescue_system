@@ -42,18 +42,6 @@ const AdminDonations = () => {
     { header: 'Quantity', accessor: 'quantity' },
     { header: 'Pickup Address', accessor: 'pickup_address', cell: (r) => <span className="text-xs text-slate-600 truncate max-w-xs block">{r.pickup_address}</span> },
     { header: 'Status', accessor: 'status', cell: (r) => <StatusBadge status={r.status} /> },
-    {
-      header: 'Actions',
-      cell: (r) => (
-        <div>
-          {r.status === 'PENDING_ADMIN_APPROVAL' && (
-            <Button size="sm" variant="success" onClick={() => handleVerify(r.id)}>
-              Approve Post
-            </Button>
-          )}
-        </div>
-      )
-    }
   ];
 
 

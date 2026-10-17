@@ -30,7 +30,6 @@ const Sidebar = () => {
           { to: '/admin/tracking', label: 'Live Tracking', icon: MapPin },
 
           { to: '/admin/reports', label: 'Reports', icon: FileText },
-          { to: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
           { to: '/admin/logs', label: 'Audit Logs', icon: ShieldAlert },
         ];
       case 'DONOR':

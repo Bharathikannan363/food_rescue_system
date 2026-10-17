@@ -147,8 +147,7 @@ const PostFood = () => {
           longitude={longitude}
           setLongitude={setLongitude}
         />
-
-        <ImageUpload onChange={setImageFile} label="Food Photo (Camera Capture or File Upload)" />
+        <ImageUpload onChange={setImageFile} label="Camera Capture food or File Upload (we will accept only GeoTag photo)" />
 
         <div className="pt-2 flex items-center justify-end gap-3">
           <Button variant="secondary" onClick={() => navigate('/donor/dashboard')}>

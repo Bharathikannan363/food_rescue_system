@@ -17,7 +17,6 @@ import AdminRequests from '../pages/admin/Requests';
 import AdminAssignments from '../pages/admin/Assignments';
 import AdminLiveTracking from '../pages/admin/LiveTracking';
 import AdminReports from '../pages/admin/Reports';
-import AdminAnalytics from '../pages/admin/Analytics';
 import AdminNotifications from '../pages/admin/Notifications';
 import AdminLogs from '../pages/admin/Logs';
 
@@ -69,7 +68,6 @@ const AppRoutes = () => {
       <Route path="/admin/assignments" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAssignments /></ProtectedRoute>} />
       <Route path="/admin/tracking" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLiveTracking /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminReports /></ProtectedRoute>} />
-      <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminAnalytics /></ProtectedRoute>} />
      
       <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminNotifications /></ProtectedRoute>} />
       <Route path="/admin/logs" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminLogs /></ProtectedRoute>} />

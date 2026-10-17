@@ -151,6 +151,7 @@ const DonorTracking = () => {
                   {del.volunteer?.phone && (
                     <a
                       href={`tel:${del.volunteer.phone}`}
+                      className="flex items-center justify-center gap-1.5 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95"
                     >
                       <Phone className="w-3.5 h-3.5" /> Call Volunteer ({del.volunteer.phone})
                     </a>
