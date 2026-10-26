@@ -1,4 +1,4 @@
-```javascript
+
 import { useState, useEffect, useCallback } from 'react';
 import { volunteerService } from '../services/volunteerService';
 
@@ -46,6 +46,7 @@ export const useGeolocation = (isVolunteerActive = false) => {
     }
 
     setLoading(true);
+    setError(null);
 
     // Try high accuracy first.
     navigator.geolocation.getCurrentPosition(
@@ -81,7 +82,9 @@ export const useGeolocation = (isVolunteerActive = false) => {
   useEffect(() => {
     requestPosition();
 
-    if (!navigator.geolocation) return undefined;
+    if (!navigator.geolocation) {
+      return undefined;
+    }
 
     // Watch for continuous location updates.
     const watchId = navigator.geolocation.watchPosition(
@@ -109,4 +112,3 @@ export const useGeolocation = (isVolunteerActive = false) => {
     refreshLocation: requestPosition,
   };
 };
-```
