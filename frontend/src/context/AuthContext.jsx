@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 
@@ -5,48 +6,77 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      return JSON.parse(sessionStorage.getItem('user') || 'null');
+    } catch {
+      return null;
+    }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('token') || null);
+
+  const [token, setToken] = useState(
+    () => sessionStorage.getItem('token') || null
+  );
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (token && !user) {
-      setLoading(true);
-      authService.getCurrentUser()
-        .then((res) => {
-          if (res.success) {
-            setUser(res.user);
-            localStorage.setItem('user', JSON.stringify(res.user));
-          }
-        })
-        .catch(() => logout())
-        .finally(() => setLoading(false));
-    }
-  }, [token]);
-
-  const login = async (username, password, captcha_id, captcha_code) => {
-    const res = await authService.login({ username, password, captcha_id, captcha_code });
-    if (res.success) {
-      setToken(res.token);
-      setUser(res.user);
-      localStorage.setItem('token', res.token);
-      localStorage.setItem('user', JSON.stringify(res.user));
-    }
-    return res;
-  };
-
   const logout = () => {
-    setUser(null);
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    setUser(null);
     window.location.href = '/login';
   };
 
+  useEffect(() => {
+    if (!token || user) return;
+
+    let active = true;
+    setLoading(true);
+
+    authService.getCurrentUser()
+      .then((res) => {
+        if (!active) return;
+
+        if (res.success && res.user) {
+          sessionStorage.setItem('user', JSON.stringify(res.user));
+          setUser(res.user);
+        } else {
+          logout();
+        }
+      })
+      .catch(() => {
+        if (active) logout();
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [token, user]);
+
+  const login = async (username, password, captcha_id, captcha_code) => {
+    const res = await authService.login({
+      username,
+      password,
+      captcha_id,
+      captcha_code,
+    });
+
+    if (res.success && res.token && res.user) {
+      sessionStorage.setItem('token', res.token);
+      sessionStorage.setItem('user', JSON.stringify(res.user));
+      setToken(res.token);
+      setUser(res.user);
+    }
+
+    return res;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, setUser }}>
+    <AuthContext.Provider
+      value={{ user, token, loading, login, logout, setUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

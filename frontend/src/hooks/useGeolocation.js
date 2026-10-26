@@ -1,27 +1,42 @@
+```javascript
 import { useState, useEffect, useCallback } from 'react';
 import { volunteerService } from '../services/volunteerService';
 
 export const useGeolocation = (isVolunteerActive = false) => {
-  const [location, setLocation] = useState({ latitude: null, longitude: null, accuracy: null });
+  const [location, setLocation] = useState({
+    latitude: null,
+    longitude: null,
+    accuracy: null,
+  });
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const syncToBackend = useCallback((lat, lng) => {
-    const token = localStorage.getItem('token');
-    if (isVolunteerActive && token) {
-      volunteerService.updateLocation(lat, lng).catch(err => {
-        console.warn('[Geolocation API Sync Error]', err);
-      });
-    }
-  }, [isVolunteerActive]);
+  const syncToBackend = useCallback(
+    (lat, lng) => {
+      const token = sessionStorage.getItem('token');
 
-  const handlePositionSuccess = useCallback((position) => {
-    const { latitude, longitude, accuracy } = position.coords;
-    setLocation({ latitude, longitude, accuracy });
-    setError(null);
-    setLoading(false);
-    syncToBackend(latitude, longitude);
-  }, [syncToBackend]);
+      if (isVolunteerActive && token) {
+        volunteerService.updateLocation(lat, lng).catch((err) => {
+          console.warn('[Geolocation API Sync Error]', err);
+        });
+      }
+    },
+    [isVolunteerActive]
+  );
+
+  const handlePositionSuccess = useCallback(
+    (position) => {
+      const { latitude, longitude, accuracy } = position.coords;
+
+      setLocation({ latitude, longitude, accuracy });
+      setError(null);
+      setLoading(false);
+
+      syncToBackend(latitude, longitude);
+    },
+    [syncToBackend]
+  );
 
   const requestPosition = useCallback(() => {
     if (!navigator.geolocation) {
@@ -32,41 +47,53 @@ export const useGeolocation = (isVolunteerActive = false) => {
 
     setLoading(true);
 
-    // Try high accuracy first
+    // Try high accuracy first.
     navigator.geolocation.getCurrentPosition(
-      (pos) => handlePositionSuccess(pos),
+      handlePositionSuccess,
       (err) => {
-        console.warn('High accuracy geolocation timed out or failed, falling back to standard accuracy:', err.message);
-        // Fallback to standard accuracy
+        console.warn(
+          'High accuracy geolocation failed; falling back to standard accuracy:',
+          err.message
+        );
+
+        // Fall back to standard accuracy.
         navigator.geolocation.getCurrentPosition(
-          (pos) => handlePositionSuccess(pos),
+          handlePositionSuccess,
           (fallbackErr) => {
             setError(fallbackErr.message);
             setLoading(false);
           },
-          { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
+          {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 30000,
+          }
         );
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 10000,
+      }
     );
   }, [handlePositionSuccess]);
 
   useEffect(() => {
     requestPosition();
 
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) return undefined;
 
-    // Start watch for continuous real-time movement
+    // Watch for continuous location updates.
     const watchId = navigator.geolocation.watchPosition(
       handlePositionSuccess,
       (err) => {
-        // Non-critical background watch error; do not override acquired location
+        // Background watch errors are non-critical.
         console.debug('[Geolocation Watch Notice]', err.message);
       },
       {
         enableHighAccuracy: true,
         maximumAge: 5000,
-        timeout: 15000
+        timeout: 15000,
       }
     );
 
@@ -75,6 +102,11 @@ export const useGeolocation = (isVolunteerActive = false) => {
     };
   }, [requestPosition, handlePositionSuccess]);
 
-  return { location, error, loading, refreshLocation: requestPosition };
+  return {
+    location,
+    error,
+    loading,
+    refreshLocation: requestPosition,
+  };
 };
-
+```
