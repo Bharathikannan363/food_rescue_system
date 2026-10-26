@@ -5,7 +5,7 @@ node_modules/
 __pycache__/
 *.pyc
 backend/venv/
-
+backend/.env
 # Local dev artifacts
 *.log
 
