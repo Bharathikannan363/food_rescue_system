@@ -1,4 +1,5 @@
 
+import math
 from datetime import datetime
 
 from flask import Blueprint, request, jsonify
@@ -29,9 +30,27 @@ ACTIVE_ASSIGNMENT_STATUSES = [
     "OUT_FOR_DELIVERY",
 ]
 
+ACTIVE_DONATION_STATUSES = [
+    "APPROVED",
+    "DONOR_ACCEPTED",
+    "PICKED_UP",
+    "OUT_FOR_DELIVERY",
+]
+
+
+# ---------------------------------------------------------
+# HELPER FUNCTIONS
+# ---------------------------------------------------------
+
+def api_error(message, status_code):
+    return jsonify({
+        "success": False,
+        "message": message
+    }), status_code
+
 
 def get_current_user():
-    """Return the authenticated user from the JWT identity."""
+    """Get authenticated user using JWT identity."""
     identity = get_jwt_identity()
 
     try:
@@ -43,38 +62,65 @@ def get_current_user():
 
 
 def admin_required_user():
-    """Return the current user only when the user is an admin."""
+    """Verify that the authenticated user is an admin."""
     user = get_current_user()
 
     if not user:
-        return None, (
-            jsonify({
-                "success": False,
-                "message": "User not found"
-            }),
-            404
-        )
+        return None, api_error("User not found", 404)
 
     if user.role != "ADMIN":
-        return None, (
-            jsonify({
-                "success": False,
-                "message": "Admin access required"
-            }),
-            403
-        )
+        return None, api_error("Admin access required", 403)
 
     return user, None
 
 
 def latest_volunteer_location(volunteer_id):
-    """Get the latest recorded GPS location of a volunteer."""
+    """Return the latest GPS record for a volunteer."""
     return (
         VolunteerLocation.query
         .filter_by(volunteer_id=volunteer_id)
         .order_by(VolunteerLocation.timestamp.desc())
         .first()
     )
+
+
+def valid_coordinates(latitude, longitude):
+    """Validate coordinate values and geographic ranges."""
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+    except (TypeError, ValueError):
+        return None
+
+    if not math.isfinite(latitude) or not math.isfinite(longitude):
+        return None
+
+    if not -90 <= latitude <= 90:
+        return None
+
+    if not -180 <= longitude <= 180:
+        return None
+
+    return latitude, longitude
+
+
+def volunteer_coordinates(volunteer):
+    """Get latest GPS coordinates, falling back to profile coordinates."""
+    latest = latest_volunteer_location(volunteer.id)
+
+    latitude = (
+        latest.latitude
+        if latest and latest.latitude is not None
+        else volunteer.latitude
+    )
+
+    longitude = (
+        latest.longitude
+        if latest and latest.longitude is not None
+        else volunteer.longitude
+    )
+
+    return latitude, longitude, latest
 
 
 # ---------------------------------------------------------
@@ -99,14 +145,9 @@ def get_live_feed():
 
     for donor in donors:
 
-        active_donations_count = Donation.query.filter(
+        active_count = Donation.query.filter(
             Donation.donor_id == donor.id,
-            Donation.status.in_([
-                "APPROVED",
-                "DONOR_ACCEPTED",
-                "PICKED_UP",
-                "OUT_FOR_DELIVERY"
-            ])
+            Donation.status.in_(ACTIVE_DONATION_STATUSES)
         ).count()
 
         donor_list.append({
@@ -120,7 +161,7 @@ def get_live_feed():
             "address": donor.address,
             "latitude": donor.latitude,
             "longitude": donor.longitude,
-            "active_donations_count": active_donations_count
+            "active_donations_count": active_count
         })
 
     # NGOS
@@ -130,14 +171,13 @@ def get_live_feed():
 
     for ngo in ngos:
 
-        # Skip NGOs that are not approved.
         if ngo.user and (
             ngo.user.approval_status != "APPROVED"
             and ngo.user.is_approved is False
         ):
             continue
 
-        active_requests_count = FoodRequest.query.filter(
+        active_count = FoodRequest.query.filter(
             FoodRequest.ngo_id == ngo.id,
             FoodRequest.status.in_(["PENDING", "ACCEPTED"])
         ).count()
@@ -151,7 +191,7 @@ def get_live_feed():
             "address": ngo.address,
             "latitude": ngo.latitude,
             "longitude": ngo.longitude,
-            "active_requests_count": active_requests_count
+            "active_requests_count": active_count
         })
 
     # VOLUNTEERS
@@ -161,26 +201,17 @@ def get_live_feed():
 
     for volunteer in volunteers:
 
-        latest = latest_volunteer_location(volunteer.id)
+        latitude, longitude, latest = volunteer_coordinates(volunteer)
 
-        latitude = (
-            latest.latitude
-            if latest and latest.latitude is not None
-            else volunteer.latitude
+        active_assignment = (
+            Assignment.query
+            .filter(
+                Assignment.volunteer_id == volunteer.id,
+                Assignment.status.in_(ACTIVE_ASSIGNMENT_STATUSES)
+            )
+            .order_by(Assignment.assigned_at.desc())
+            .first()
         )
-
-        longitude = (
-            latest.longitude
-            if latest and latest.longitude is not None
-            else volunteer.longitude
-        )
-
-        active_assignment = Assignment.query.filter(
-            Assignment.volunteer_id == volunteer.id,
-            Assignment.status.in_(ACTIVE_ASSIGNMENT_STATUSES)
-        ).order_by(
-            Assignment.assigned_at.desc()
-        ).first()
 
         active_task = None
 
@@ -221,9 +252,7 @@ def get_live_feed():
                 ),
 
                 "donor_name": (
-                    donor.organization_name
-                    if donor
-                    else "Donor"
+                    donor.organization_name if donor else "Donor"
                 ),
 
                 "donor_phone": (
@@ -301,6 +330,20 @@ def get_live_feed():
             else (donor.longitude if donor else None)
         )
 
+        volunteer_latitude = (
+            volunteer_latest.latitude
+            if volunteer_latest
+            and volunteer_latest.latitude is not None
+            else (volunteer.latitude if volunteer else None)
+        )
+
+        volunteer_longitude = (
+            volunteer_latest.longitude
+            if volunteer_latest
+            and volunteer_latest.longitude is not None
+            else (volunteer.longitude if volunteer else None)
+        )
+
         active_deliveries.append({
 
             "assignment_id": assignment.id,
@@ -358,9 +401,7 @@ def get_live_feed():
             "volunteer": {
                 "id": volunteer.id if volunteer else None,
                 "name": (
-                    volunteer.full_name
-                    if volunteer
-                    else "Volunteer"
+                    volunteer.full_name if volunteer else "Volunteer"
                 ),
                 "phone": (
                     volunteer.user.phone
@@ -372,24 +413,8 @@ def get_live_feed():
                     if volunteer
                     else "Bike"
                 ),
-                "latitude": (
-                    volunteer_latest.latitude
-                    if volunteer_latest
-                    and volunteer_latest.latitude is not None
-                    else (
-                        volunteer.latitude
-                        if volunteer else None
-                    )
-                ),
-                "longitude": (
-                    volunteer_latest.longitude
-                    if volunteer_latest
-                    and volunteer_latest.longitude is not None
-                    else (
-                        volunteer.longitude
-                        if volunteer else None
-                    )
-                ),
+                "latitude": volunteer_latitude,
+                "longitude": volunteer_longitude,
                 "last_ping": (
                     volunteer_latest.timestamp.isoformat()
                     if volunteer_latest
@@ -400,7 +425,6 @@ def get_live_feed():
         })
 
     return jsonify({
-
         "success": True,
 
         "current_user": {
@@ -433,12 +457,11 @@ def get_all_locations():
         return error
 
     volunteers = Volunteer.query.all()
-
     results = []
 
     for volunteer in volunteers:
 
-        latest = latest_volunteer_location(volunteer.id)
+        latitude, longitude, latest = volunteer_coordinates(volunteer)
 
         results.append({
 
@@ -451,17 +474,8 @@ def get_all_locations():
                 else None
             ),
 
-            "latitude": (
-                latest.latitude
-                if latest and latest.latitude is not None
-                else volunteer.latitude
-            ),
-
-            "longitude": (
-                latest.longitude
-                if latest and latest.longitude is not None
-                else volunteer.longitude
-            ),
+            "latitude": latitude,
+            "longitude": longitude,
 
             "vehicle_type": volunteer.vehicle_type,
             "is_available": volunteer.is_available,
@@ -491,44 +505,37 @@ def update_location():
 
     data = request.get_json(silent=True) or {}
 
-    try:
-        latitude = float(data.get("latitude"))
-        longitude = float(data.get("longitude"))
+    coordinates = valid_coordinates(
+        data.get("latitude"),
+        data.get("longitude")
+    )
 
-    except (ValueError, TypeError):
-        return jsonify({
-            "success": False,
-            "message": "Valid latitude and longitude are required"
-        }), 400
+    if coordinates is None:
+        return api_error(
+            "Valid latitude and longitude are required",
+            400
+        )
 
-    # Validate coordinate ranges.
-    if not (-90 <= latitude <= 90):
-        return jsonify({
-            "success": False,
-            "message": "Latitude must be between -90 and 90"
-        }), 400
-
-    if not (-180 <= longitude <= 180):
-        return jsonify({
-            "success": False,
-            "message": "Longitude must be between -180 and 180"
-        }), 400
+    latitude, longitude = coordinates
 
     user = get_current_user()
 
     if not user:
-        return jsonify({
-            "success": False,
-            "message": "User not found"
-        }), 404
+        return api_error("User not found", 404)
 
     now = datetime.utcnow()
 
     try:
 
-        if user.role == "VOLUNTEER" and user.volunteer_profile:
+        if user.role == "VOLUNTEER":
 
             volunteer = user.volunteer_profile
+
+            if not volunteer:
+                return api_error(
+                    "Volunteer profile not found",
+                    404
+                )
 
             volunteer.latitude = latitude
             volunteer.longitude = longitude
@@ -544,18 +551,30 @@ def update_location():
 
             message = "Volunteer location updated"
 
-        elif user.role == "DONOR" and user.donor_profile:
+        elif user.role == "DONOR":
 
             donor = user.donor_profile
+
+            if not donor:
+                return api_error(
+                    "Donor profile not found",
+                    404
+                )
 
             donor.latitude = latitude
             donor.longitude = longitude
 
             message = "Donor location updated"
 
-        elif user.role == "NGO" and user.ngo_profile:
+        elif user.role == "NGO":
 
             ngo = user.ngo_profile
+
+            if not ngo:
+                return api_error(
+                    "NGO profile not found",
+                    404
+                )
 
             ngo.latitude = latitude
             ngo.longitude = longitude
@@ -563,30 +582,26 @@ def update_location():
             message = "NGO location updated"
 
         else:
-
-            return jsonify({
-                "success": False,
-                "message": "This user role cannot update a location"
-            }), 403
+            return api_error(
+                "This user role cannot update a location",
+                403
+            )
 
         db.session.commit()
 
         return jsonify({
-
             "success": True,
             "message": message,
             "role": user.role,
             "latitude": latitude,
             "longitude": longitude,
             "timestamp": now.isoformat()
-
         }), 200
 
     except Exception:
-
         db.session.rollback()
 
-        return jsonify({
-            "success": False,
-            "message": "Unable to save location"
-        }), 500
+        return api_error(
+            "Unable to save location",
+            500
+        )
