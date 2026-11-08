@@ -1,87 +1,59 @@
 
+import logging
+
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import desc
-import logging
 
 from app.extensions import db
 from app.models.notification import Notification
 
-
-notification_bp = Blueprint(
-    "notification",
-    __name__,
-    url_prefix="/api/notifications"
-)
-
 logger = logging.getLogger(__name__)
 
+notification_bp = Blueprint(
+    'notification',
+    __name__,
+    url_prefix='/api/notifications'
+)
 
-# =====================================================
-# GET ALL NOTIFICATIONS FOR LOGGED-IN USER
-# GET /api/notifications
-# =====================================================
-@notification_bp.route("", methods=["GET"])
+
+# GET: Fetch logged-in user's notifications
+@notification_bp.route('', methods=['GET'])
 @jwt_required()
 def get_user_notifications():
-
     try:
         user_id = get_jwt_identity()
 
         notifications = (
             Notification.query
-            .filter_by(user_id=user_id)
-            .order_by(desc(Notification.created_at))
+            .filter_by(user_id=int(user_id))
+            .order_by(Notification.created_at.desc())
             .all()
         )
 
-        notification_list = [
-            notification.to_dict()
-            for notification in notifications
-        ]
-
-        unread_count = sum(
-            1 for notification in notifications
-            if not notification.is_read
-        )
-
         return jsonify({
-            "success": True,
-            "notifications": notification_list,
-            "total": len(notification_list),
-            "unread_count": unread_count
+            'success': True,
+            'notifications': [
+                notification.to_dict()
+                for notification in notifications
+            ]
         }), 200
-
-    except SQLAlchemyError:
-        db.session.rollback()
-        logger.exception("Database error while fetching notifications")
-
-        return jsonify({
-            "success": False,
-            "message": "Database error while retrieving notifications"
-        }), 500
 
     except Exception:
         db.session.rollback()
-        logger.exception("Unexpected error while fetching notifications")
+        logger.exception("Error fetching user notifications")
 
         return jsonify({
-            "success": False,
-            "message": "Unable to retrieve notifications"
+            'success': False,
+            'message': 'Unable to fetch notifications'
         }), 500
 
 
-# =====================================================
-# MARK ONE NOTIFICATION AS READ
-# POST /api/notifications/<id>/read
-# =====================================================
-@notification_bp.route("/<int:notif_id>/read", methods=["POST"])
+# POST: Mark one notification as read
+@notification_bp.route('/<int:notif_id>/read', methods=['POST'])
 @jwt_required()
 def mark_as_read(notif_id):
-
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
 
         notification = Notification.query.filter_by(
             id=notif_id,
@@ -90,79 +62,55 @@ def mark_as_read(notif_id):
 
         if notification is None:
             return jsonify({
-                "success": False,
-                "message": "Notification not found"
+                'success': False,
+                'message': 'Notification not found'
             }), 404
 
-        if not notification.is_read:
-            notification.is_read = True
-            db.session.commit()
+        notification.is_read = True
+        db.session.commit()
 
         return jsonify({
-            "success": True,
-            "message": "Notification marked as read",
-            "notification": notification.to_dict()
+            'success': True,
+            'notification': notification.to_dict()
         }), 200
-
-    except SQLAlchemyError:
-        db.session.rollback()
-        logger.exception("Database error while marking notification as read")
-
-        return jsonify({
-            "success": False,
-            "message": "Database error while updating notification"
-        }), 500
 
     except Exception:
         db.session.rollback()
-        logger.exception("Unexpected error while marking notification as read")
+        logger.exception("Error marking notification as read")
 
         return jsonify({
-            "success": False,
-            "message": "Unable to update notification"
+            'success': False,
+            'message': 'Unable to mark notification as read'
         }), 500
 
 
-# =====================================================
-# MARK ALL NOTIFICATIONS AS READ
-# POST /api/notifications/read-all
-# =====================================================
-@notification_bp.route("/read-all", methods=["POST"])
+# POST: Mark all logged-in user's notifications as read
+@notification_bp.route('/read-all', methods=['POST'])
 @jwt_required()
 def mark_all_as_read():
-
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
 
         Notification.query.filter_by(
             user_id=user_id,
             is_read=False
         ).update(
-            {"is_read": True},
+            {'is_read': True},
             synchronize_session=False
         )
 
         db.session.commit()
 
         return jsonify({
-            "success": True,
-            "message": "All notifications marked as read"
+            'success': True,
+            'message': 'All notifications marked as read'
         }), 200
-
-    except SQLAlchemyError:
-        db.session.rollback()
-        logger.exception("Database error while marking all notifications as read")
-
-        return jsonify({
-            "success": False,
-            "message": "Unable to update all notifications"
-        }), 500
 
     except Exception:
         db.session.rollback()
-        logger.exception("Unexpected error while marking all notifications as read")
+        logger.exception("Error marking all notifications as read")
 
         return jsonify({
-            "success": False,
-            "message": "Unexpected error while updating notifications"
+            'success': False,
+            'message': 'Unable to mark all notifications as read'
         }), 500
