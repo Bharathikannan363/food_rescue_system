@@ -40,19 +40,21 @@ const AdminLiveTracking = () => {
         setRefreshing(true);
       }
 
-      const response = await locationService.getLiveFeed();
+      // api.js already returns response.data
+      const data = await locationService.getLiveFeed();
 
-      // Axios returns the API response inside response.data
-      const data = response.data;
-
-      if (!data) {
-        throw new Error('Empty response received from server.');
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response received from server.');
       }
 
-      setVolunteers(data.volunteers || []);
-      setDonors(data.donors || []);
-      setNgos(data.ngos || []);
-      setActiveDeliveries(data.active_deliveries || []);
+      setVolunteers(Array.isArray(data.volunteers) ? data.volunteers : []);
+      setDonors(Array.isArray(data.donors) ? data.donors : []);
+      setNgos(Array.isArray(data.ngos) ? data.ngos : []);
+      setActiveDeliveries(
+        Array.isArray(data.active_deliveries)
+          ? data.active_deliveries
+          : []
+      );
       setCurrentUser(data.current_user || null);
 
       setError(null);
@@ -87,6 +89,15 @@ const AdminLiveTracking = () => {
 
   // Focus map on selected volunteer
   const handleFocusVolunteer = (volunteer) => {
+    if (
+      volunteer.latitude == null ||
+      volunteer.longitude == null ||
+      volunteer.latitude === '' ||
+      volunteer.longitude === ''
+    ) {
+      return;
+    }
+
     const latitude = Number(volunteer.latitude);
     const longitude = Number(volunteer.longitude);
 
@@ -250,7 +261,6 @@ const AdminLiveTracking = () => {
           </div>
 
           <div className="relative">
-
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
 
             <input
@@ -260,7 +270,6 @@ const AdminLiveTracking = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200"
             />
-
           </div>
 
         </div>
@@ -285,13 +294,11 @@ const AdminLiveTracking = () => {
               >
 
                 <div className="flex items-center justify-between mb-3">
-
                   <span className="font-semibold text-slate-800">
                     {volunteer.full_name || 'Volunteer'}
                   </span>
 
                   <Radio className="w-4 h-4 text-emerald-600" />
-
                 </div>
 
                 <div className="space-y-2 text-xs text-slate-500">
@@ -321,21 +328,15 @@ const AdminLiveTracking = () => {
                 </div>
 
                 <div className="mt-3">
-
                   {volunteer.active_task ? (
-
                     <span className="text-xs text-amber-700 font-semibold">
                       Active delivery
                     </span>
-
                   ) : (
-
                     <span className="text-xs text-emerald-600 font-semibold">
                       No active delivery
                     </span>
-
                   )}
-
                 </div>
 
               </button>
