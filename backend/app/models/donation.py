@@ -112,11 +112,6 @@ class Donation(db.Model):
     )
 
     def expiry_state(self):
-        """
-        Returns:
-        NO_EXPIRY_INFO, FRESH, EXPIRING_SOON or EXPIRED.
-        """
-
         if not self.expiry_time:
             return "NO_EXPIRY_INFO"
 
@@ -125,43 +120,47 @@ class Donation(db.Model):
         if now >= self.expiry_time:
             return "EXPIRED"
 
-        if self.expiry_time - now <= self.EXPIRING_SOON_THRESHOLD:
+        if (
+            self.expiry_time - now
+            <= self.EXPIRING_SOON_THRESHOLD
+        ):
             return "EXPIRING_SOON"
 
         return "FRESH"
 
     def to_dict(self):
-        donor_info = (
-            self.donor.to_dict()
-            if self.donor
-            else {}
+
+        donor = self.donor
+
+        donor_user = (
+            donor.user
+            if donor else None
         )
 
+        # Find the accepted NGO request
         accepted_req = next(
             (
-                request
-                for request in self.requests
-                if request.status in ["ACCEPTED", "COMPLETED"]
+                req
+                for req in self.requests
+                if req.status in ["ACCEPTED", "COMPLETED"]
             ),
             None
         )
 
-        accepted_ngo_name = (
-            accepted_req.ngo.ngo_name
-            if accepted_req and accepted_req.ngo
-            else None
-        )
-
-        accepted_ngo_id = (
-            accepted_req.ngo_id
-            if accepted_req
-            else None
-        )
-
+        accepted_ngo_name = None
+        accepted_ngo_id = None
         assigned_vol_name = None
 
-        if accepted_req and accepted_req.assignments:
-            active_assign = next(
+        if accepted_req:
+
+            accepted_ngo = accepted_req.ngo
+
+            if accepted_ngo:
+                accepted_ngo_id = accepted_ngo.id
+                accepted_ngo_name = accepted_ngo.ngo_name
+
+            # Find the active volunteer assignment
+            active_assignment = next(
                 (
                     assignment
                     for assignment in accepted_req.assignments
@@ -177,23 +176,30 @@ class Donation(db.Model):
                 None
             )
 
-            if active_assign and active_assign.volunteer:
+            if (
+                active_assignment
+                and active_assignment.volunteer
+            ):
                 assigned_vol_name = (
-                    active_assign.volunteer.full_name
+                    active_assignment.volunteer.full_name
                 )
 
         return {
             "id": self.id,
             "donor_id": self.donor_id,
 
+            # Donor information
             "donor_name": (
-                donor_info.get("organization_name")
-                or donor_info.get("username")
-                or "Donor"
+                donor.organization_name
+                if donor else "Donor"
             ),
 
-            "donor_phone": donor_info.get("phone"),
+            "donor_phone": (
+                donor_user.phone
+                if donor_user else None
+            ),
 
+            # Donation information
             "title": self.title,
             "description": self.description,
             "food_type": self.food_type,
@@ -208,39 +214,36 @@ class Donation(db.Model):
 
             "prep_time": (
                 self.prep_time.isoformat()
-                if self.prep_time
-                else None
+                if self.prep_time else None
             ),
 
             "expiry_time": (
                 self.expiry_time.isoformat()
-                if self.expiry_time
-                else None
+                if self.expiry_time else None
             ),
 
             "expiry_state": self.expiry_state(),
             "status": self.status,
 
+            # Assignment information
             "accepted_ngo_id": accepted_ngo_id,
             "accepted_ngo_name": accepted_ngo_name,
             "assigned_volunteer_name": assigned_vol_name,
 
+            # Timestamps
             "created_at": (
                 self.created_at.isoformat()
-                if self.created_at
-                else None
+                if self.created_at else None
             ),
 
             "updated_at": (
                 self.updated_at.isoformat()
-                if self.updated_at
-                else None
+                if self.updated_at else None
             ),
 
             "cancelled_at": (
                 self.cancelled_at.isoformat()
-                if self.cancelled_at
-                else None
+                if self.cancelled_at else None
             )
         }
 

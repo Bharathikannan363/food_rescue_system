@@ -17,11 +17,17 @@ from app.models import (
     VolunteerLocation,
 )
 
+
 location_bp = Blueprint(
     "location",
     __name__,
     url_prefix="/api/location"
 )
+
+
+# ---------------------------------------------------------
+# STATUS CONFIGURATION
+# ---------------------------------------------------------
 
 ACTIVE_ASSIGNMENT_STATUSES = [
     "ASSIGNED",
@@ -33,13 +39,14 @@ ACTIVE_ASSIGNMENT_STATUSES = [
 ACTIVE_DONATION_STATUSES = [
     "APPROVED",
     "DONOR_ACCEPTED",
+    "VOLUNTEER_ASSIGNED",
     "PICKED_UP",
     "OUT_FOR_DELIVERY",
 ]
 
 
 # ---------------------------------------------------------
-# HELPER FUNCTIONS
+# COMMON HELPERS
 # ---------------------------------------------------------
 
 def api_error(message, status_code):
@@ -50,7 +57,6 @@ def api_error(message, status_code):
 
 
 def get_current_user():
-    """Get authenticated user using JWT identity."""
     identity = get_jwt_identity()
 
     try:
@@ -62,7 +68,6 @@ def get_current_user():
 
 
 def admin_required_user():
-    """Verify that the authenticated user is an admin."""
     user = get_current_user()
 
     if not user:
@@ -74,18 +79,7 @@ def admin_required_user():
     return user, None
 
 
-def latest_volunteer_location(volunteer_id):
-    """Return the latest GPS record for a volunteer."""
-    return (
-        VolunteerLocation.query
-        .filter_by(volunteer_id=volunteer_id)
-        .order_by(VolunteerLocation.timestamp.desc())
-        .first()
-    )
-
-
 def valid_coordinates(latitude, longitude):
-    """Validate coordinate values and geographic ranges."""
     try:
         latitude = float(latitude)
         longitude = float(longitude)
@@ -104,8 +98,16 @@ def valid_coordinates(latitude, longitude):
     return latitude, longitude
 
 
+def latest_volunteer_location(volunteer_id):
+    return (
+        VolunteerLocation.query
+        .filter_by(volunteer_id=volunteer_id)
+        .order_by(VolunteerLocation.timestamp.desc())
+        .first()
+    )
+
+
 def volunteer_coordinates(volunteer):
-    """Get latest GPS coordinates, falling back to profile coordinates."""
     latest = latest_volunteer_location(volunteer.id)
 
     latitude = (
@@ -123,182 +125,594 @@ def volunteer_coordinates(volunteer):
     return latitude, longitude, latest
 
 
+def get_active_assignment(volunteer_id):
+    return (
+        Assignment.query
+        .filter(
+            Assignment.volunteer_id == volunteer_id,
+            Assignment.status.in_(ACTIVE_ASSIGNMENT_STATUSES)
+        )
+        .order_by(Assignment.assigned_at.desc())
+        .first()
+    )
+
+
 # ---------------------------------------------------------
-# 1. ADMIN LIVE LOCATION FEED
+# DONOR SERIALIZER
+# ---------------------------------------------------------
+
+def serialize_donor(donor):
+    return {
+        "donor_id": donor.id,
+        "user_id": donor.user_id,
+
+        "organization_name": (
+            donor.organization_name
+            or (
+                donor.user.username
+                if donor.user
+                else "Donor"
+            )
+        ),
+
+        "phone": (
+            donor.user.phone
+            if donor.user
+            else None
+        ),
+
+        "address": donor.address,
+        "latitude": donor.latitude,
+        "longitude": donor.longitude,
+
+        "active_donations_count": Donation.query.filter(
+            Donation.donor_id == donor.id,
+            Donation.status.in_(ACTIVE_DONATION_STATUSES)
+        ).count()
+    }
+
+
+# ---------------------------------------------------------
+# NGO SERIALIZER
+# ---------------------------------------------------------
+
+def serialize_ngo(ngo):
+    return {
+        "ngo_id": ngo.id,
+        "user_id": ngo.user_id,
+        "ngo_name": ngo.ngo_name,
+        "registration_number": ngo.registration_number,
+
+        "phone": (
+            ngo.user.phone
+            if ngo.user
+            else None
+        ),
+
+        "address": ngo.address,
+        "latitude": ngo.latitude,
+        "longitude": ngo.longitude,
+
+        "active_requests_count": FoodRequest.query.filter(
+            FoodRequest.ngo_id == ngo.id,
+            FoodRequest.status.in_([
+                "PENDING",
+                "ACCEPTED"
+            ])
+        ).count()
+    }
+
+
+# ---------------------------------------------------------
+# VOLUNTEER SERIALIZER
+# ---------------------------------------------------------
+
+def serialize_volunteer(volunteer):
+    latitude, longitude, latest = volunteer_coordinates(
+        volunteer
+    )
+
+    assignment = get_active_assignment(volunteer.id)
+    active_task = None
+
+    if assignment and assignment.request:
+        food_request = assignment.request
+        donation = food_request.donation
+        ngo = food_request.ngo
+
+        donor = (
+            donation.donor
+            if donation
+            else None
+        )
+
+        active_task = {
+            "assignment_id": assignment.id,
+            "status": assignment.status,
+
+            "donation_title": (
+                donation.title
+                if donation
+                else "Food Package"
+            ),
+
+            "quantity": (
+                donation.quantity
+                if donation
+                else ""
+            ),
+
+            "pickup_address": (
+                donation.pickup_address
+                if donation
+                else (
+                    donor.address
+                    if donor
+                    else None
+                )
+            ),
+
+            "pickup_latitude": (
+                donation.latitude
+                if donation and donation.latitude is not None
+                else (
+                    donor.latitude
+                    if donor
+                    else None
+                )
+            ),
+
+            "pickup_longitude": (
+                donation.longitude
+                if donation and donation.longitude is not None
+                else (
+                    donor.longitude
+                    if donor
+                    else None
+                )
+            ),
+
+            "donor_name": (
+                donor.organization_name
+                if donor
+                else "Donor"
+            ),
+
+            "donor_phone": (
+                donor.user.phone
+                if donor and donor.user
+                else None
+            ),
+
+            "dropoff_address": (
+                ngo.address
+                if ngo
+                else None
+            ),
+
+            "dropoff_latitude": (
+                ngo.latitude
+                if ngo
+                else None
+            ),
+
+            "dropoff_longitude": (
+                ngo.longitude
+                if ngo
+                else None
+            ),
+
+            "ngo_name": (
+                ngo.ngo_name
+                if ngo
+                else "NGO Hub"
+            ),
+
+            "ngo_phone": (
+                ngo.user.phone
+                if ngo and ngo.user
+                else None
+            )
+        }
+
+    return {
+        "volunteer_id": volunteer.id,
+        "user_id": volunteer.user_id,
+        "full_name": volunteer.full_name,
+
+        "phone": (
+            volunteer.user.phone
+            if volunteer.user
+            else None
+        ),
+
+        "vehicle_type": volunteer.vehicle_type or "Bike",
+        "is_available": volunteer.is_available,
+        "latitude": latitude,
+        "longitude": longitude,
+
+        "timestamp": (
+            latest.timestamp.isoformat()
+            if latest and latest.timestamp
+            else None
+        ),
+
+        "active_task": active_task
+    }
+
+
+# ---------------------------------------------------------
+# ACTIVE DELIVERY SERIALIZER
+# ---------------------------------------------------------
+
+def serialize_active_delivery(assignment):
+    food_request = assignment.request
+
+    if not food_request:
+        return None
+
+    donation = food_request.donation
+    ngo = food_request.ngo
+
+    donor = (
+        donation.donor
+        if donation
+        else None
+    )
+
+    volunteer = assignment.volunteer
+
+    volunteer_latest = (
+        latest_volunteer_location(volunteer.id)
+        if volunteer
+        else None
+    )
+
+    donation_latitude = (
+        donation.latitude
+        if donation and donation.latitude is not None
+        else (
+            donor.latitude
+            if donor
+            else None
+        )
+    )
+
+    donation_longitude = (
+        donation.longitude
+        if donation and donation.longitude is not None
+        else (
+            donor.longitude
+            if donor
+            else None
+        )
+    )
+
+    volunteer_latitude = (
+        volunteer_latest.latitude
+        if volunteer_latest and volunteer_latest.latitude is not None
+        else (
+            volunteer.latitude
+            if volunteer
+            else None
+        )
+    )
+
+    volunteer_longitude = (
+        volunteer_latest.longitude
+        if volunteer_latest and volunteer_latest.longitude is not None
+        else (
+            volunteer.longitude
+            if volunteer
+            else None
+        )
+    )
+
+    return {
+        "assignment_id": assignment.id,
+        "request_id": food_request.id,
+        "status": assignment.status,
+
+        "assigned_at": (
+            assignment.assigned_at.isoformat()
+            if assignment.assigned_at
+            else None
+        ),
+
+        "donation": {
+            "id": donation.id if donation else None,
+
+            "title": (
+                donation.title
+                if donation
+                else "Food Donation"
+            ),
+
+            "food_type": (
+                donation.food_type
+                if donation
+                else ""
+            ),
+
+            "quantity": (
+                donation.quantity
+                if donation
+                else ""
+            ),
+
+            "pickup_address": (
+                donation.pickup_address
+                if donation
+                else (
+                    donor.address
+                    if donor
+                    else None
+                )
+            ),
+
+            "latitude": donation_latitude,
+            "longitude": donation_longitude
+        },
+
+        "donor": {
+            "id": donor.id if donor else None,
+
+            "name": (
+                donor.organization_name
+                if donor
+                else "Donor"
+            ),
+
+            "phone": (
+                donor.user.phone
+                if donor and donor.user
+                else None
+            ),
+
+            "address": (
+                donor.address
+                if donor
+                else None
+            ),
+
+            "latitude": (
+                donor.latitude
+                if donor
+                else None
+            ),
+
+            "longitude": (
+                donor.longitude
+                if donor
+                else None
+            )
+        },
+
+        "ngo": {
+            "id": ngo.id if ngo else None,
+
+            "name": (
+                ngo.ngo_name
+                if ngo
+                else "NGO"
+            ),
+
+            "phone": (
+                ngo.user.phone
+                if ngo and ngo.user
+                else None
+            ),
+
+            "address": (
+                ngo.address
+                if ngo
+                else None
+            ),
+
+            "latitude": (
+                ngo.latitude
+                if ngo
+                else None
+            ),
+
+            "longitude": (
+                ngo.longitude
+                if ngo
+                else None
+            )
+        },
+
+        "volunteer": {
+            "id": (
+                volunteer.id
+                if volunteer
+                else None
+            ),
+
+            "name": (
+                volunteer.full_name
+                if volunteer
+                else "Volunteer"
+            ),
+
+            "phone": (
+                volunteer.user.phone
+                if volunteer and volunteer.user
+                else None
+            ),
+
+            "vehicle_type": (
+                volunteer.vehicle_type
+                if volunteer
+                else "Bike"
+            ),
+
+            "latitude": volunteer_latitude,
+            "longitude": volunteer_longitude,
+
+            "last_ping": (
+                volunteer_latest.timestamp.isoformat()
+                if volunteer_latest and volunteer_latest.timestamp
+                else None
+            )
+        }
+    }
+
+
+# ---------------------------------------------------------
+# ROLE-SCOPED LIVE FEED
 # GET /api/location/live-feed
-# ADMIN ONLY
 # ---------------------------------------------------------
 
 @location_bp.route("/live-feed", methods=["GET"])
 @jwt_required()
 def get_live_feed():
 
-    admin, error = admin_required_user()
+    user = get_current_user()
 
-    if error:
-        return error
+    if not user:
+        return api_error("User not found", 404)
 
-    # DONORS
-    donor_list = []
+    donors = {}
+    ngos = {}
+    volunteers = {}
+    assignments = []
 
-    donors = Donor.query.all()
+    # ADMIN: GLOBAL TRACKING
+    if user.role == "ADMIN":
 
-    for donor in donors:
+        for donor in Donor.query.all():
+            donors[donor.id] = donor
 
-        active_count = Donation.query.filter(
-            Donation.donor_id == donor.id,
-            Donation.status.in_(ACTIVE_DONATION_STATUSES)
-        ).count()
+        for ngo in NGO.query.all():
+            ngos[ngo.id] = ngo
 
-        donor_list.append({
-            "donor_id": donor.id,
-            "user_id": donor.user_id,
-            "organization_name": (
-                donor.organization_name
-                or (donor.user.username if donor.user else "Donor")
-            ),
-            "phone": donor.user.phone if donor.user else None,
-            "address": donor.address,
-            "latitude": donor.latitude,
-            "longitude": donor.longitude,
-            "active_donations_count": active_count
-        })
+        for volunteer in Volunteer.query.all():
+            volunteers[volunteer.id] = volunteer
 
-    # NGOS
-    ngo_list = []
+        assignments = (
+            Assignment.query
+            .filter(
+                Assignment.status.in_(
+                    ACTIVE_ASSIGNMENT_STATUSES
+                )
+            )
+            .order_by(Assignment.assigned_at.desc())
+            .all()
+        )
 
-    ngos = NGO.query.all()
+    # NGO: OWN REQUESTS AND DELIVERIES
+    elif user.role == "NGO":
 
-    for ngo in ngos:
+        ngo = user.ngo_profile
 
-        if ngo.user and (
-            ngo.user.approval_status != "APPROVED"
-            and ngo.user.is_approved is False
-        ):
-            continue
+        if not ngo:
+            return api_error(
+                "NGO profile not found",
+                404
+            )
 
-        active_count = FoodRequest.query.filter(
-            FoodRequest.ngo_id == ngo.id,
-            FoodRequest.status.in_(["PENDING", "ACCEPTED"])
-        ).count()
+        ngos[ngo.id] = ngo
 
-        ngo_list.append({
-            "ngo_id": ngo.id,
-            "user_id": ngo.user_id,
-            "ngo_name": ngo.ngo_name,
-            "registration_number": ngo.registration_number,
-            "phone": ngo.user.phone if ngo.user else None,
-            "address": ngo.address,
-            "latitude": ngo.latitude,
-            "longitude": ngo.longitude,
-            "active_requests_count": active_count
-        })
+        requests = FoodRequest.query.filter_by(
+            ngo_id=ngo.id
+        ).all()
 
-    # VOLUNTEERS
-    volunteer_list = []
+        request_ids = [
+            item.id
+            for item in requests
+        ]
 
-    volunteers = Volunteer.query.all()
+        if request_ids:
+            assignments = (
+                Assignment.query
+                .filter(
+                    Assignment.request_id.in_(request_ids),
+                    Assignment.status.in_(
+                        ACTIVE_ASSIGNMENT_STATUSES
+                    )
+                )
+                .order_by(Assignment.assigned_at.desc())
+                .all()
+            )
 
-    for volunteer in volunteers:
+    # DONOR: OWN DONATIONS AND DELIVERIES
+    elif user.role == "DONOR":
 
-        latitude, longitude, latest = volunteer_coordinates(volunteer)
+        donor = user.donor_profile
 
-        active_assignment = (
+        if not donor:
+            return api_error(
+                "Donor profile not found",
+                404
+            )
+
+        donors[donor.id] = donor
+
+        donations = Donation.query.filter_by(
+            donor_id=donor.id
+        ).all()
+
+        donation_ids = [
+            item.id
+            for item in donations
+        ]
+
+        if donation_ids:
+            requests = FoodRequest.query.filter(
+                FoodRequest.donation_id.in_(donation_ids)
+            ).all()
+
+            request_ids = [
+                item.id
+                for item in requests
+            ]
+
+            if request_ids:
+                assignments = (
+                    Assignment.query
+                    .filter(
+                        Assignment.request_id.in_(request_ids),
+                        Assignment.status.in_(
+                            ACTIVE_ASSIGNMENT_STATUSES
+                        )
+                    )
+                    .order_by(Assignment.assigned_at.desc())
+                    .all()
+                )
+
+    # VOLUNTEER: OWN LOCATION AND ASSIGNMENTS
+    elif user.role == "VOLUNTEER":
+
+        volunteer = user.volunteer_profile
+
+        if not volunteer:
+            return api_error(
+                "Volunteer profile not found",
+                404
+            )
+
+        volunteers[volunteer.id] = volunteer
+
+        assignments = (
             Assignment.query
             .filter(
                 Assignment.volunteer_id == volunteer.id,
-                Assignment.status.in_(ACTIVE_ASSIGNMENT_STATUSES)
+                Assignment.status.in_(
+                    ACTIVE_ASSIGNMENT_STATUSES
+                )
             )
             .order_by(Assignment.assigned_at.desc())
-            .first()
+            .all()
         )
 
-        active_task = None
+    else:
+        return api_error(
+            "This role cannot access location tracking",
+            403
+        )
 
-        if active_assignment and active_assignment.request:
-
-            food_request = active_assignment.request
-            donation = food_request.donation
-            ngo = food_request.ngo
-
-            donor = donation.donor if donation else None
-
-            active_task = {
-                "assignment_id": active_assignment.id,
-                "status": active_assignment.status,
-
-                "donation_title": (
-                    donation.title if donation else "Food Package"
-                ),
-
-                "quantity": donation.quantity if donation else "",
-
-                "pickup_address": (
-                    donation.pickup_address
-                    if donation
-                    else (donor.address if donor else None)
-                ),
-
-                "pickup_latitude": (
-                    donation.latitude
-                    if donation and donation.latitude is not None
-                    else (donor.latitude if donor else None)
-                ),
-
-                "pickup_longitude": (
-                    donation.longitude
-                    if donation and donation.longitude is not None
-                    else (donor.longitude if donor else None)
-                ),
-
-                "donor_name": (
-                    donor.organization_name if donor else "Donor"
-                ),
-
-                "donor_phone": (
-                    donor.user.phone
-                    if donor and donor.user
-                    else None
-                ),
-
-                "dropoff_address": ngo.address if ngo else None,
-                "dropoff_latitude": ngo.latitude if ngo else None,
-                "dropoff_longitude": ngo.longitude if ngo else None,
-                "ngo_name": ngo.ngo_name if ngo else "NGO Hub",
-
-                "ngo_phone": (
-                    ngo.user.phone
-                    if ngo and ngo.user
-                    else None
-                )
-            }
-
-        volunteer_list.append({
-            "volunteer_id": volunteer.id,
-            "user_id": volunteer.user_id,
-            "full_name": volunteer.full_name,
-            "phone": (
-                volunteer.user.phone if volunteer.user else None
-            ),
-            "vehicle_type": volunteer.vehicle_type or "Bike",
-            "is_available": volunteer.is_available,
-            "latitude": latitude,
-            "longitude": longitude,
-            "timestamp": (
-                latest.timestamp.isoformat()
-                if latest and latest.timestamp
-                else None
-            ),
-            "active_task": active_task
-        })
-
-    # ACTIVE DELIVERIES
-    active_deliveries = []
-
-    assignments = Assignment.query.filter(
-        Assignment.status.in_(ACTIVE_ASSIGNMENT_STATUSES)
-    ).all()
-
+    # Collect related profiles only
     for assignment in assignments:
 
         food_request = assignment.request
@@ -309,128 +723,56 @@ def get_live_feed():
         donation = food_request.donation
         ngo = food_request.ngo
 
-        donor = donation.donor if donation else None
-        volunteer = assignment.volunteer
-
-        volunteer_latest = (
-            latest_volunteer_location(volunteer.id)
-            if volunteer
+        donor = (
+            donation.donor
+            if donation
             else None
         )
 
-        donation_latitude = (
-            donation.latitude
-            if donation and donation.latitude is not None
-            else (donor.latitude if donor else None)
+        volunteer = assignment.volunteer
+
+        if donor:
+            donors[donor.id] = donor
+
+        if ngo:
+            ngos[ngo.id] = ngo
+
+        if volunteer:
+            volunteers[volunteer.id] = volunteer
+
+    donor_list = [
+        serialize_donor(item)
+        for item in donors.values()
+    ]
+
+    ngo_list = [
+        serialize_ngo(item)
+        for item in ngos.values()
+    ]
+
+    volunteer_list = [
+        serialize_volunteer(item)
+        for item in volunteers.values()
+    ]
+
+    active_deliveries = []
+
+    for assignment in assignments:
+
+        delivery = serialize_active_delivery(
+            assignment
         )
 
-        donation_longitude = (
-            donation.longitude
-            if donation and donation.longitude is not None
-            else (donor.longitude if donor else None)
-        )
-
-        volunteer_latitude = (
-            volunteer_latest.latitude
-            if volunteer_latest
-            and volunteer_latest.latitude is not None
-            else (volunteer.latitude if volunteer else None)
-        )
-
-        volunteer_longitude = (
-            volunteer_latest.longitude
-            if volunteer_latest
-            and volunteer_latest.longitude is not None
-            else (volunteer.longitude if volunteer else None)
-        )
-
-        active_deliveries.append({
-
-            "assignment_id": assignment.id,
-            "request_id": food_request.id,
-            "status": assignment.status,
-
-            "assigned_at": (
-                assignment.assigned_at.isoformat()
-                if assignment.assigned_at
-                else None
-            ),
-
-            "donation": {
-                "id": donation.id if donation else None,
-                "title": donation.title if donation else "Food Donation",
-                "food_type": donation.food_type if donation else "",
-                "quantity": donation.quantity if donation else "",
-                "pickup_address": (
-                    donation.pickup_address
-                    if donation
-                    else (donor.address if donor else None)
-                ),
-                "latitude": donation_latitude,
-                "longitude": donation_longitude
-            },
-
-            "donor": {
-                "id": donor.id if donor else None,
-                "name": (
-                    donor.organization_name if donor else "Donor"
-                ),
-                "phone": (
-                    donor.user.phone
-                    if donor and donor.user
-                    else None
-                ),
-                "address": donor.address if donor else None,
-                "latitude": donor.latitude if donor else None,
-                "longitude": donor.longitude if donor else None
-            },
-
-            "ngo": {
-                "id": ngo.id if ngo else None,
-                "name": ngo.ngo_name if ngo else "NGO",
-                "phone": (
-                    ngo.user.phone
-                    if ngo and ngo.user
-                    else None
-                ),
-                "address": ngo.address if ngo else None,
-                "latitude": ngo.latitude if ngo else None,
-                "longitude": ngo.longitude if ngo else None
-            },
-
-            "volunteer": {
-                "id": volunteer.id if volunteer else None,
-                "name": (
-                    volunteer.full_name if volunteer else "Volunteer"
-                ),
-                "phone": (
-                    volunteer.user.phone
-                    if volunteer and volunteer.user
-                    else None
-                ),
-                "vehicle_type": (
-                    volunteer.vehicle_type
-                    if volunteer
-                    else "Bike"
-                ),
-                "latitude": volunteer_latitude,
-                "longitude": volunteer_longitude,
-                "last_ping": (
-                    volunteer_latest.timestamp.isoformat()
-                    if volunteer_latest
-                    and volunteer_latest.timestamp
-                    else None
-                )
-            }
-        })
+        if delivery:
+            active_deliveries.append(delivery)
 
     return jsonify({
         "success": True,
 
         "current_user": {
-            "id": admin.id,
-            "username": admin.username,
-            "role": admin.role
+            "id": user.id,
+            "username": user.username,
+            "role": user.role
         },
 
         "donors": donor_list,
@@ -442,9 +784,8 @@ def get_live_feed():
 
 
 # ---------------------------------------------------------
-# 2. ADMIN VIEW ALL VOLUNTEER LOCATIONS
+# ADMIN: VIEW ALL VOLUNTEER LOCATIONS
 # GET /api/location/volunteers
-# ADMIN ONLY
 # ---------------------------------------------------------
 
 @location_bp.route("/volunteers", methods=["GET"])
@@ -456,15 +797,15 @@ def get_all_locations():
     if error:
         return error
 
-    volunteers = Volunteer.query.all()
     results = []
 
-    for volunteer in volunteers:
+    for volunteer in Volunteer.query.all():
 
-        latitude, longitude, latest = volunteer_coordinates(volunteer)
+        latitude, longitude, latest = (
+            volunteer_coordinates(volunteer)
+        )
 
         results.append({
-
             "volunteer_id": volunteer.id,
             "full_name": volunteer.full_name,
 
@@ -476,7 +817,6 @@ def get_all_locations():
 
             "latitude": latitude,
             "longitude": longitude,
-
             "vehicle_type": volunteer.vehicle_type,
             "is_available": volunteer.is_available,
 
@@ -494,7 +834,7 @@ def get_all_locations():
 
 
 # ---------------------------------------------------------
-# 3. UPDATE AUTHENTICATED USER LOCATION
+# UPDATE AUTHENTICATED USER LOCATION
 # POST /api/location/update
 # DONOR / NGO / VOLUNTEER
 # ---------------------------------------------------------
@@ -521,7 +861,10 @@ def update_location():
     user = get_current_user()
 
     if not user:
-        return api_error("User not found", 404)
+        return api_error(
+            "User not found",
+            404
+        )
 
     now = datetime.utcnow()
 
@@ -540,14 +883,14 @@ def update_location():
             volunteer.latitude = latitude
             volunteer.longitude = longitude
 
-            location = VolunteerLocation(
+            location_record = VolunteerLocation(
                 volunteer_id=volunteer.id,
                 latitude=latitude,
                 longitude=longitude,
                 timestamp=now
             )
 
-            db.session.add(location)
+            db.session.add(location_record)
 
             message = "Volunteer location updated"
 

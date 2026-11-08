@@ -49,7 +49,8 @@ class Assignment(db.Model):
         nullable=True
     )
 
-    # Related delivery records
+    # Related delivery records.
+    # Preserves the existing one-to-many relationship.
     deliveries = db.relationship(
         "Delivery",
         backref="assignment",
@@ -58,17 +59,25 @@ class Assignment(db.Model):
     )
 
     def to_dict(self):
-        req_info = (
-            self.request.to_dict()
-            if self.request
-            else {}
+
+        volunteer = self.volunteer
+
+        volunteer_user = (
+            volunteer.user if volunteer else None
         )
 
-        vol_info = (
-            self.volunteer.to_dict()
-            if self.volunteer
-            else {}
-        )
+        food_request = self.request
+
+        request_details = None
+
+        if food_request:
+            request_details = {
+                "id": food_request.id,
+                "donation_id": food_request.donation_id,
+                "ngo_id": food_request.ngo_id,
+                "status": food_request.status,
+                "quality_status": food_request.quality_status
+            }
 
         return {
             "id": self.id,
@@ -76,35 +85,38 @@ class Assignment(db.Model):
             "volunteer_id": self.volunteer_id,
 
             "volunteer_name": (
-                vol_info.get("full_name")
-                or vol_info.get("username")
-                or "Volunteer"
+                volunteer.full_name
+                if volunteer else "Volunteer"
             ),
 
-            "volunteer_phone": vol_info.get("phone"),
-            "vehicle_type": vol_info.get("vehicle_type"),
+            "volunteer_phone": (
+                volunteer_user.phone
+                if volunteer_user else None
+            ),
+
+            "vehicle_type": (
+                volunteer.vehicle_type
+                if volunteer else None
+            ),
 
             "status": self.status,
 
             "assigned_at": (
                 self.assigned_at.isoformat()
-                if self.assigned_at
-                else None
+                if self.assigned_at else None
             ),
 
             "accepted_at": (
                 self.accepted_at.isoformat()
-                if self.accepted_at
-                else None
+                if self.accepted_at else None
             ),
 
             "rejected_at": (
                 self.rejected_at.isoformat()
-                if self.rejected_at
-                else None
+                if self.rejected_at else None
             ),
 
-            "request_details": req_info
+            "request_details": request_details
         }
 
     def __repr__(self):

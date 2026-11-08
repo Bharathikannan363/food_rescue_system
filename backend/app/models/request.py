@@ -55,7 +55,7 @@ class Request(db.Model):
         nullable=True
     )
 
-    # Assignments associated with this request
+    # Related assignments
     assignments = db.relationship(
         "Assignment",
         backref="request",
@@ -64,34 +64,83 @@ class Request(db.Model):
     )
 
     def to_dict(self):
-        ngo_info = (
-            self.ngo.to_dict()
-            if self.ngo
-            else {}
+        donation = self.donation
+        ngo = self.ngo
+
+        donor = (
+            donation.donor
+            if donation else None
         )
 
-        donation_info = (
-            self.donation.to_dict()
-            if self.donation
-            else {}
+        donor_user = (
+            donor.user
+            if donor else None
+        )
+
+        ngo_user = (
+            ngo.user
+            if ngo else None
         )
 
         return {
             "id": self.id,
             "donation_id": self.donation_id,
 
-            "donation_title": donation_info.get("title"),
-            "donation_food_type": donation_info.get("food_type"),
-            "donation_quantity": donation_info.get("quantity"),
-            "donation_image": donation_info.get("image"),
-            "donation_pickup_address": donation_info.get("pickup_address"),
-            "donor_name": donation_info.get("donor_name"),
+            # Donation information
+            "donation_title": (
+                donation.title
+                if donation else None
+            ),
 
+            "donation_food_type": (
+                donation.food_type
+                if donation else None
+            ),
+
+            "donation_quantity": (
+                donation.quantity
+                if donation else None
+            ),
+
+            "donation_image": (
+                donation.image
+                if donation else None
+            ),
+
+            "donation_pickup_address": (
+                donation.pickup_address
+                if donation else None
+            ),
+
+            "donor_name": (
+                donor.organization_name
+                if donor else None
+            ),
+
+            "donor_phone": (
+                donor_user.phone
+                if donor_user else None
+            ),
+
+            # NGO information
             "ngo_id": self.ngo_id,
-            "ngo_name": ngo_info.get("ngo_name"),
-            "ngo_phone": ngo_info.get("phone"),
-            "ngo_address": ngo_info.get("address"),
 
+            "ngo_name": (
+                ngo.ngo_name
+                if ngo else None
+            ),
+
+            "ngo_phone": (
+                ngo_user.phone
+                if ngo_user else None
+            ),
+
+            "ngo_address": (
+                ngo.address
+                if ngo else None
+            ),
+
+            # Request information
             "status": self.status,
             "quality_status": self.quality_status,
             "quality_notes": self.quality_notes,

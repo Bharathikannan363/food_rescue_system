@@ -14,6 +14,7 @@ class Delivery(db.Model):
         db.Integer,
         db.ForeignKey("assignments.id"),
         nullable=False,
+        unique=True,
         index=True
     )
 
@@ -66,31 +67,24 @@ class Delivery(db.Model):
     status = db.Column(
         db.String(30),
         nullable=False,
-        default="PICKED_UP",
+        default="ASSIGNED",
         index=True
     )
 
-    def to_dict(self):
-        assign_info = (
-            self.assignment.to_dict()
-            if self.assignment
-            else {}
-        )
+    def to_dict(self, include_assignment=False):
 
-        return {
+        result = {
             "id": self.id,
             "assignment_id": self.assignment_id,
 
             "pickup_time": (
                 self.pickup_time.isoformat()
-                if self.pickup_time
-                else None
+                if self.pickup_time else None
             ),
 
             "delivery_time": (
                 self.delivery_time.isoformat()
-                if self.delivery_time
-                else None
+                if self.delivery_time else None
             ),
 
             "pickup_latitude": self.pickup_latitude,
@@ -102,10 +96,16 @@ class Delivery(db.Model):
             "proof_image": self.proof_image,
             "beneficiary_count": self.beneficiary_count,
             "beneficiary_notes": self.beneficiary_notes,
-            "status": self.status,
-
-            "assignment_details": assign_info
+            "status": self.status
         }
+
+        if include_assignment:
+            result["assignment_details"] = (
+                self.assignment.to_dict()
+                if self.assignment else None
+            )
+
+        return result
 
     def __repr__(self):
         return (

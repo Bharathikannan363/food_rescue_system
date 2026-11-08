@@ -67,12 +67,43 @@ class Volunteer(db.Model):
     )
 
     def to_dict(self):
-        user_data = self.user.to_dict() if self.user else {}
+
+        user = self.user
 
         return {
-            **user_data,
             "id": self.id,
             "user_id": self.user_id,
+
+            "username": (
+                user.username
+                if user else None
+            ),
+
+            "email": (
+                user.email
+                if user else None
+            ),
+
+            "phone": (
+                user.phone
+                if user else None
+            ),
+
+            "role": (
+                user.role
+                if user else None
+            ),
+
+            "is_approved": (
+                user.is_approved
+                if user else False
+            ),
+
+            "approval_status": (
+                user.approval_status
+                if user else None
+            ),
+
             "full_name": self.full_name,
             "vehicle_type": self.vehicle_type,
             "address": self.address,
