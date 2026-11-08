@@ -1,7 +1,21 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useCallback } from 'react';
+
 import { locationService } from '../../services/locationService';
 import LiveMap from '../../components/LiveMap';
-import { MapPin, RefreshCw, Truck, HeartHandshake, Building2, Phone, Search, Radio, Navigation } from 'lucide-react';
+
+import {
+  Truck,
+  HeartHandshake,
+  Building2,
+  Navigation,
+  Search,
+  RefreshCw,
+  MapPin,
+  Phone,
+  Radio
+} from 'lucide-react';
+
 import Loading from '../../components/Loading';
 import ErrorMessage from '../../components/ErrorMessage';
 
@@ -11,176 +25,365 @@ const AdminLiveTracking = () => {
   const [ngos, setNgos] = useState([]);
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [focusCoords, setFocusCoords] = useState(null);
 
-  const fetchTracking = async (isManual = false) => {
+  // Fetch live tracking information
+  const fetchTracking = useCallback(async (isManual = false) => {
     try {
-      if (isManual) setRefreshing(true);
-      const res = await locationService.getLiveFeed();
-      if (res.success) {
-        setVolunteers(res.volunteers || []);
-        setDonors(res.donors || []);
-        setNgos(res.ngos || []);
-        setActiveDeliveries(res.active_deliveries || []);
-        setCurrentUser(res.current_user || null);
-        setError(null);
+      if (isManual) {
+        setRefreshing(true);
       }
+
+      const response = await locationService.getLiveFeed();
+
+      // Axios returns the API response inside response.data
+      const data = response.data;
+
+      if (!data) {
+        throw new Error('Empty response received from server.');
+      }
+
+      setVolunteers(data.volunteers || []);
+      setDonors(data.donors || []);
+      setNgos(data.ngos || []);
+      setActiveDeliveries(data.active_deliveries || []);
+      setCurrentUser(data.current_user || null);
+
+      setError(null);
+
     } catch (err) {
-      setError(err.message);
+      console.error('Live tracking error:', err);
+
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Unable to load live tracking data.';
+
+      setError(message);
+
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
-
-  useEffect(() => {
-    fetchTracking();
-    const interval = setInterval(() => fetchTracking(false), 10000); // 10s auto-refresh
-    return () => clearInterval(interval);
   }, []);
 
-  const handleFocusVolunteer = (v) => {
-    if (v.latitude && v.longitude) {
-      setFocusCoords([v.latitude, v.longitude]);
+  // Initial fetch and automatic refresh
+  useEffect(() => {
+    fetchTracking();
+
+    const interval = setInterval(() => {
+      fetchTracking();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchTracking]);
+
+  // Focus map on selected volunteer
+  const handleFocusVolunteer = (volunteer) => {
+    const latitude = Number(volunteer.latitude);
+    const longitude = Number(volunteer.longitude);
+
+    if (
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180
+    ) {
+      setFocusCoords([latitude, longitude]);
     }
   };
 
-  const filteredVolunteers = volunteers.filter(v =>
-    v.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.vehicle_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    v.phone?.includes(searchQuery)
-  );
+  // Search volunteers
+  const filteredVolunteers = volunteers.filter((volunteer) => {
+    const query = searchQuery.toLowerCase();
 
-  if (loading && volunteers.length === 0) {
-    return <Loading text="Loading Live City Rescue Network & Coordinates..." />;
+    return (
+      volunteer.full_name?.toLowerCase().includes(query) ||
+      volunteer.vehicle_type?.toLowerCase().includes(query) ||
+      volunteer.phone?.includes(query)
+    );
+  });
+
+  if (loading) {
+    return (
+      <Loading text="Loading Live City Rescue Network & Coordinates..." />
+    );
   }
 
   return (
     <div className="space-y-6">
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-2xl font-bold text-slate-800">City Live Rescue & Tracking Map</h2>
-            <span className="flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-xs font-semibold">
-            
+          <h2 className="text-2xl font-bold text-slate-800">
+            City Live Rescue & Tracking Map
+          </h2>
+
+          <p className="text-sm text-slate-500 mt-1">
+            Monitor donors, NGOs, volunteers and active deliveries.
+          </p>
+
+          <div className="flex items-center gap-2 mt-2">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span className="text-xs text-emerald-700 font-semibold">
+              Auto-refresh every 10 seconds
             </span>
           </div>
-         
         </div>
+
+        <button
+          onClick={() => fetchTracking(true)}
+          disabled={refreshing}
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+          />
+          {refreshing ? 'Refreshing...' : 'Refresh Locations'}
+        </button>
+
       </div>
 
-      {error && <ErrorMessage message={error} retry={() => fetchTracking(true)} />}
+      {/* Error */}
+      {error && (
+        <ErrorMessage
+          message={error}
+          retry={() => fetchTracking(true)}
+        />
+      )}
 
-      {/* Metrics Row */}
+      {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Volunteers Active</p>
-            <h3 className="text-2xl font-bold text-slate-800 mt-1">{volunteers.length}</h3>
-            <p className="text-[10px] text-blue-600 mt-0.5">Live GPS Broadcasting</p>
-          </div>
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <Truck className="w-5 h-5" />
-          </div>
-        </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Active In-Transit</p>
-            <h3 className="text-2xl font-bold text-purple-700 mt-1">{activeDeliveries.length}</h3>
-            <p className="text-[10px] text-purple-600 mt-0.5">Missions in Progress</p>
-          </div>
-          <div className="p-3 bg-purple-50 text-purple-600 rounded-xl">
-            <Navigation className="w-5 h-5" />
-          </div>
-        </div>
+        <MetricCard
+          title="Volunteers"
+          value={volunteers.length}
+          subtitle="Registered volunteers"
+          color="blue"
+          icon={<Truck className="w-5 h-5" />}
+        />
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Pickup Points</p>
-            <h3 className="text-2xl font-bold text-emerald-700 mt-1">{donors.length}</h3>
-            <p className="text-[10px] text-emerald-600 mt-0.5">Registered Donors</p>
-          </div>
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-            <HeartHandshake className="w-5 h-5" />
-          </div>
-        </div>
+        <MetricCard
+          title="Active Deliveries"
+          value={activeDeliveries.length}
+          subtitle="Missions in progress"
+          color="purple"
+          icon={<Navigation className="w-5 h-5" />}
+        />
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase">NGO Hubs</p>
-            <h3 className="text-2xl font-bold text-amber-700 mt-1">{ngos.length}</h3>
-            <p className="text-[10px] text-amber-600 mt-0.5">Distribution Centers</p>
-          </div>
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl">
-            <Building2 className="w-5 h-5" />
-          </div>
-        </div>
+        <MetricCard
+          title="Donors"
+          value={donors.length}
+          subtitle="Registered donors"
+          color="emerald"
+          icon={<HeartHandshake className="w-5 h-5" />}
+        />
+
+        <MetricCard
+          title="NGO Hubs"
+          value={ngos.length}
+          subtitle="Registered NGOs"
+          color="amber"
+          icon={<Building2 className="w-5 h-5" />}
+        />
+
       </div>
 
-      {/* Main Interactive Live Map */}
-      <LiveMap
-        volunteers={volunteers}
-        donors={donors}
-        ngos={ngos}
-        activeDeliveries={activeDeliveries}
-        userLocation={currentUser?.latitude && currentUser?.longitude ? {
-          latitude: currentUser.latitude,
-          longitude: currentUser.longitude,
-          label: 'Admin Station'
-        } : null}
-        focusCoords={focusCoords}
-        height="h-[520px]"
-        onRefresh={() => fetchTracking(true)}
-        isRefreshing={refreshing}
-      />
+      {/* Live Map */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-3">
 
-      {/* Active Tracking Feed */}
+        <div className="flex items-center gap-2 mb-3">
+          <MapPin className="w-5 h-5 text-blue-600" />
+
+          <h3 className="font-bold text-slate-800">
+            Live Location Map
+          </h3>
+        </div>
+
+        <LiveMap
+          volunteers={volunteers}
+          donors={donors}
+          ngos={ngos}
+          activeDeliveries={activeDeliveries}
+          userLocation={
+            currentUser?.latitude != null &&
+            currentUser?.longitude != null
+              ? {
+                  latitude: currentUser.latitude,
+                  longitude: currentUser.longitude,
+                  label: 'Admin Station'
+                }
+              : null
+          }
+          focusCoords={focusCoords}
+          height="h-[520px]"
+          onRefresh={() => fetchTracking(true)}
+          isRefreshing={refreshing}
+        />
+
+      </div>
+
+      {/* Volunteer Tracking */}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">
+              Volunteer Tracking
+            </h3>
+
+            <p className="text-xs text-slate-500">
+              Select a volunteer to focus on their map location.
+            </p>
+          </div>
+
+          <div className="relative">
+
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+
+            <input
+              type="text"
+              placeholder="Search volunteers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-200"
+            />
+
+          </div>
+
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
           {filteredVolunteers.length === 0 ? (
-            <div className="col-span-full py-8 text-center text-xs text-slate-400">
+
+            <div className="col-span-full py-8 text-center text-sm text-slate-400">
+              No volunteers found.
             </div>
+
           ) : (
-            filteredVolunteers.map((v, idx) => (
-              <div
-                key={v.volunteer_id || idx}
-                onClick={() => handleFocusVolunteer(v)}
-                className="p-3.5 bg-slate-50 hover:bg-blue-50/50 border border-slate-200 hover:border-blue-300 rounded-xl text-xs space-y-2 transition-all cursor-pointer group"
+
+            filteredVolunteers.map((volunteer, index) => (
+
+              <button
+                type="button"
+                key={volunteer.volunteer_id || index}
+                onClick={() => handleFocusVolunteer(volunteer)}
+                className="text-left p-4 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl transition-all"
               >
-                <div className="flex items-center justify-between">
-                 
-                  
+
+                <div className="flex items-center justify-between mb-3">
+
+                  <span className="font-semibold text-slate-800">
+                    {volunteer.full_name || 'Volunteer'}
+                  </span>
+
+                  <Radio className="w-4 h-4 text-emerald-600" />
+
                 </div>
 
-                <div className="space-y-1 text-slate-500">
-                  <p className="flex items-center gap-1.5">
-                   
-                  </p>
-                  {v.phone && (
-                    <p className="flex items-center gap-1.5">
+                <div className="space-y-2 text-xs text-slate-500">
+
+                  {volunteer.phone && (
+                    <p className="flex items-center gap-2">
+                      <Phone className="w-3 h-3" />
+                      {volunteer.phone}
                     </p>
                   )}
+
+                  {volunteer.vehicle_type && (
+                    <p className="flex items-center gap-2">
+                      <Truck className="w-3 h-3" />
+                      {volunteer.vehicle_type}
+                    </p>
+                  )}
+
+                  <p className="flex items-center gap-2">
+                    <MapPin className="w-3 h-3" />
+                    {volunteer.latitude != null &&
+                    volunteer.longitude != null
+                      ? `${volunteer.latitude}, ${volunteer.longitude}`
+                      : 'Location unavailable'}
+                  </p>
+
                 </div>
 
-                {v.active_task ? (
-                  <div className="p-2 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-900">
-                   
-                  </div>
-                ) : (
-                  <div className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                  </div>
-                )}
-              </div>
+                <div className="mt-3">
+
+                  {volunteer.active_task ? (
+
+                    <span className="text-xs text-amber-700 font-semibold">
+                      Active delivery
+                    </span>
+
+                  ) : (
+
+                    <span className="text-xs text-emerald-600 font-semibold">
+                      No active delivery
+                    </span>
+
+                  )}
+
+                </div>
+
+              </button>
+
             ))
+
           )}
+
         </div>
+
       </div>
+
+    </div>
+  );
+};
+
+
+// Reusable metric card
+const MetricCard = ({ title, value, subtitle, color, icon }) => {
+
+  const colors = {
+    blue: 'bg-blue-50 text-blue-600',
+    purple: 'bg-purple-50 text-purple-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
+    amber: 'bg-amber-50 text-amber-600'
+  };
+
+  return (
+    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+
+      <div>
+        <p className="text-xs font-semibold text-slate-500 uppercase">
+          {title}
+        </p>
+
+        <h3 className="text-2xl font-bold text-slate-800 mt-1">
+          {value}
+        </h3>
+
+        <p className="text-[10px] text-slate-500 mt-1">
+          {subtitle}
+        </p>
+      </div>
+
+      <div className={`p-3 rounded-xl ${colors[color]}`}>
+        {icon}
+      </div>
+
     </div>
   );
 };

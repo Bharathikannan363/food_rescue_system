@@ -12,3 +12,6 @@ backend/.env
 # OS
 .DS_Store
 Thumbs.db
+
+# Frontend production build
+frontend/dist/

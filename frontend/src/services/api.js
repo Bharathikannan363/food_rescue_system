@@ -8,7 +8,7 @@ const api = axios.create({
   },
 });
 
-// Attach the token for the current browser tab.
+// Attach JWT token to every request
 api.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('token');
@@ -22,9 +22,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle expired or invalid tokens.
+// Return response.data directly
 api.interceptors.response.use(
   (response) => response.data,
+
   (error) => {
     if (error.response?.status === 401) {
       sessionStorage.removeItem('token');
